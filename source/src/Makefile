@@ -1,4 +1,4 @@
-CXX=clang++		# override from commandline or in Makefile_local
+CXX=g++		# override from commandline or in Makefile_local
 ACDEBUG=no		# add ACDEBUG=yes to the commandline or to Makefile_local to compile debug binaries
 
 PLATFORM= $(shell uname -s)
