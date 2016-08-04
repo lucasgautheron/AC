@@ -61,6 +61,9 @@ char *maplayout = NULL, *testlayout = NULL;
 int maplayout_factor, testlayout_factor, maplayoutssize;
 servermapbuffer mapbuffer;
 
+// demo stream
+FILE *fp_demostream = NULL;
+
 // cmod
 char *global_name;
 int totalclients = 0;
@@ -430,6 +433,10 @@ void writedemo(int chan, void *data, int len)
     lilswap(stamp, 3);
     demorecord->write(stamp, sizeof(stamp));
     demorecord->write(data, len);
+
+    if(!fp_demostream) return;
+    fwrite(stamp, sizeof(uchar), sizeof(stamp), fp_demostream);
+    fwrite(data, sizeof(uchar), len, fp_demostream);
 }
 
 void recordpacket(int chan, void *data, int len)
@@ -563,6 +570,12 @@ void enddemorecord()
     recordpackets = false;
     demorecord = NULL;
 
+    if(fp_demostream)
+    {
+        fclose(fp_demostream);
+        fp_demostream = NULL;
+    }
+
     if(!demotmp) return;
 
     if(gamemillis < DEMO_MINTIME)
@@ -641,6 +654,11 @@ void setupdemorecord()
         demotmp = NULL;
         return;
     }
+
+    defformatstring(demostreamname)("live_%d.dmo", scl.serverport);
+
+    bool reset = scl.demo_stream_maxsize >= 0 && getfilesize(demostreamname) >= 1000*1000*scl.demo_stream_maxsize;
+    fp_demostream = fopen(demostreamname, reset ? "w+" : "a+");
 
     sendservmsg("recording demo");
     logline(ACLOG_INFO, "Demo recording started.");
@@ -1593,7 +1611,7 @@ int canspawn(client *c)   // beware: canspawn() doesn't check m_arena!
 void autospawncheck()
 {
     if(mastermode != MM_MATCH || !m_autospawn || interm) return;
-    
+
     loopv(clients) if(clients[i]->type!=ST_EMPTY && clients[i]->isauthed && team_isactive(clients[i]->team))
     {
         client *cl = clients[i];

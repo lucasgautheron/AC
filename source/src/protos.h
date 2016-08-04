@@ -962,6 +962,7 @@ struct servercommandline
     bool logtimestamp, demo_interm, loggamestatus;
     string motd, servdesc_full, servdesc_pre, servdesc_suf, voteperm, mapperm;
     int clfilenesting;
+    int demo_stream_maxsize;
     vector<const char *> adminonlymaps;
 
     servercommandline() :   uprate(0), serverport(CUBE_DEFAULT_SERVER_PORT), syslogfacility(6), filethres(-1), syslogthres(-1), maxdemos(5),
@@ -970,7 +971,7 @@ struct servercommandline
                             maprot("config/maprot.cfg"), pwdfile("config/serverpwd.cfg"), blfile("config/serverblacklist.cfg"), nbfile("config/nicknameblacklist.cfg"),
                             infopath("config/serverinfo"), motdpath("config/motd"), forbidden("config/forbidden.cfg"), killmessages("config/serverkillmessages.cfg"),
                             logtimestamp(false), demo_interm(false), loggamestatus(true),
-                            clfilenesting(0)
+                            clfilenesting(0), demo_stream_maxsize(0)
     {
         motd[0] = servdesc_full[0] = servdesc_pre[0] = servdesc_suf[0] = voteperm[0] = mapperm[0] = '\0';
         demofilenameformat = DEFDEMOFILEFMT;
@@ -999,6 +1000,11 @@ struct servercommandline
                     {
                         int ai = atoi(arg+16);
                         demotimelocal = ai == 0 ? 0 : 1;
+                    }
+                    else if(!strncmp(arg, "--demo-stream-maxsize=", 22))
+                    {
+                        int ai = atoi(arg+22);
+                        demo_stream_maxsize = ai;
                     }
                     else if(!strncmp(arg, "--masterport=", 13))
                     {
