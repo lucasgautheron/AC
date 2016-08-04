@@ -15,6 +15,11 @@ VARP(serverdebug, 0, 0, 1);
 #include "serverfiles.h"
 // 2011feb05:ft: quitproc
 #include "signal.h"
+#include <stdio.h>
+#include <arpa/inet.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
 // config
 servercontroller *svcctrl = NULL;
 servercommandline scl;
@@ -111,6 +116,24 @@ void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacke
             localservertoclient(chan, packet->data, (int)packet->dataLength, demopacket);
             break;
     }
+}
+
+static void sendudptolocal(uchar *buf, int len)
+{
+    int sock = -1;
+    struct sockaddr_in addr;
+
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0)
+        return;
+
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(scl.serverport+2);
+    addr.sin_addr.s_addr = INADDR_ANY;
+
+    sendto(sock, buf, len, 0, (struct sockaddr*)&addr, sizeof(addr));
+
+    close(sock);
 }
 
 static bool reliablemessages = false;
@@ -434,9 +457,17 @@ void writedemo(int chan, void *data, int len)
     demorecord->write(stamp, sizeof(stamp));
     demorecord->write(data, len);
 
+    ucharbuf b;
+    b.buf = new uchar[sizeof(stamp)+len];
+    b.maxlen = sizeof(stamp)+len;
+    b.len = 0;
+    b.put((uchar *)stamp, sizeof(stamp));
+    b.put((uchar *)data, len);
+
+    sendudptolocal(b.buf, b.len);
+
     if(!fp_demostream) return;
-    fwrite(stamp, sizeof(uchar), sizeof(stamp), fp_demostream);
-    fwrite(data, sizeof(uchar), len, fp_demostream);
+    fwrite(b.buf, sizeof(uchar), b.len, fp_demostream);
 }
 
 void recordpacket(int chan, void *data, int len)
