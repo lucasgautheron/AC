@@ -118,22 +118,20 @@ void sendpacket(int n, int chan, ENetPacket *packet, int exclude, bool demopacke
     }
 }
 
-static void sendudptolocal(uchar *buf, int len)
+void sendudptolocal(char *buf, int len)
 {
-    int sock = -1;
+    static int sock = -1;
     struct sockaddr_in addr;
-
-    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 0)
         return;
-
+ 
+    memset(&addr, 0, sizeof addr);
     addr.sin_family = AF_INET;
     addr.sin_port = htons(scl.serverport+2);
-    addr.sin_addr.s_addr = INADDR_ANY;
-
+    addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+ 
     sendto(sock, buf, len, 0, (struct sockaddr*)&addr, sizeof(addr));
-
-    close(sock);
 }
 
 static bool reliablemessages = false;
@@ -457,17 +455,18 @@ void writedemo(int chan, void *data, int len)
     demorecord->write(stamp, sizeof(stamp));
     demorecord->write(data, len);
 
-    ucharbuf b;
-    b.buf = new uchar[sizeof(stamp)+len];
+    charbuf b;
+    b.buf = new char[sizeof(stamp)+len];
     b.maxlen = sizeof(stamp)+len;
     b.len = 0;
-    b.put((uchar *)stamp, sizeof(stamp));
-    b.put((uchar *)data, len);
+    b.put((char *)stamp, sizeof(stamp));
+    b.put((char *)data, len);
 
-    sendudptolocal(b.buf, b.len);
+    sendudptolocal(b.buf, sizeof(stamp)+len);
 
-    if(!fp_demostream) return;
-    fwrite(b.buf, sizeof(uchar), b.len, fp_demostream);
+    if(fp_demostream) fwrite(b.buf, sizeof(char), b.len, fp_demostream);
+
+    DELETEA(b.buf);    
 }
 
 void recordpacket(int chan, void *data, int len)
